@@ -1,0 +1,17 @@
+# Core
+fastapi>=0.110
+uvicorn[standard]>=0.29
+requests>=2.31
+PyJWT[crypto]>=2.8
+pydantic>=2.6
+
+# LLM (LangChain + Groq by default; add langchain-openai etc. to switch providers)
+langchain>=0.3
+langchain-core>=0.3
+langchain-groq>=0.2
+
+# RAG over the repository
+langchain-community>=0.3
+langchain-text-splitters>=0.3
+faiss-cpu>=1.8
+fastembed>=0.3

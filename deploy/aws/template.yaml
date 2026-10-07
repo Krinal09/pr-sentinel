@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: PR Sentinel - AI GitHub pull request reviewer on AWS Lambda
+
+Parameters:
+  GitHubAppId:
+    Type: String
+  GitHubWebhookSecret:
+    Type: String
+    NoEcho: true
+  GitHubPrivateKey:
+    Type: String
+    NoEcho: true
+    Description: Contents of the GitHub App .pem file (newlines as \n)
+  GroqApiKey:
+    Type: String
+    NoEcho: true
+
+Resources:
+  PRSentinelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 2048
+      Timeout: 300            # the async review job; the webhook itself returns in < 1s
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          GITHUB_APP_ID: !Ref GitHubAppId
+          GITHUB_WEBHOOK_SECRET: !Ref GitHubWebhookSecret
+          GITHUB_PRIVATE_KEY: !Ref GitHubPrivateKey
+          GROQ_API_KEY: !Ref GroqApiKey
+          LLM_PROVIDER: groq
+          LLM_MODEL: llama-3.3-70b-versatile
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction   # lets the webhook hand the job to itself
+              Resource: "*"
+      Events:
+        Webhook:
+          Type: HttpApi
+          Properties:
+            Path: /webhook
+            Method: POST
+    Metadata:
+      Dockerfile: deploy/aws/Dockerfile.lambda
+      DockerContext: ../..
+      DockerTag: latest
+
+  PRSentinelLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PRSentinelFunction}
+      RetentionInDays: 14
+
+Outputs:
+  WebhookUrl:
+    Description: Paste this into your GitHub App's "Webhook URL"
+    Value: !Sub https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/webhook

@@ -1,0 +1,11 @@
+# Container image for AWS Lambda (the RAG deps are too big for a zip package).
+FROM public.ecr.aws/lambda/python:3.12
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt boto3
+
+COPY pr_sentinel ${LAMBDA_TASK_ROOT}/pr_sentinel
+
+# FastEmbed caches its model in /tmp (the only writable path in Lambda).
+ENV FASTEMBED_CACHE_PATH=/tmp/fastembed
+CMD ["pr_sentinel.lambda_handler.handler"]
